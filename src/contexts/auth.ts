@@ -5,7 +5,7 @@ import type { GoogleSession } from '../services/googleAuth'
 export type AuthContextValue = {
   session: GoogleSession | null
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: () => Promise<void>
   logout: () => void
 }
 
