@@ -181,46 +181,6 @@
   gap: 14px;
 }
 
-.field {
-  display: grid;
-  gap: 7px;
-  color: #5d4851;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.inputWrapper {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 48px;
-  padding: 0 13px;
-  border: 1px solid #ead5da;
-  border-radius: 12px;
-  background: #fff;
-  color: #b47a8a;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.inputWrapper:focus-within {
-  border-color: #c98498;
-  box-shadow: 0 0 0 3px rgba(201, 132, 152, 0.14);
-}
-
-.inputWrapper input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #4e3a42;
-  font: inherit;
-  font-weight: 400;
-}
-
-.inputWrapper input::placeholder {
-  color: #b5a2a8;
-}
-
 .button:hover {
   background: #bb7188;
   box-shadow: 0 9px 18px rgba(163, 91, 111, 0.24);
