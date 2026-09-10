@@ -18,6 +18,14 @@ export type CalendarEvent = {
   htmlLink?: string
 }
 
+export type NewCalendarCourse = {
+  name: string
+  weekdays: number[]
+  startTime: string
+  durationMinutes: number
+  semesterEnd: string
+}
+
 type TokenResponse = {
   access_token?: string
   expires_in?: number
@@ -51,10 +59,11 @@ const GOOGLE_SCOPES = [
   'openid',
   'email',
   'profile',
-  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
 ].join(' ')
 
-const SESSION_STORAGE_KEY = 'hub-academico.google-session'
+// A nova chave força uma autorização renovada após a mudança para calendar.events.
+const SESSION_STORAGE_KEY = 'hub-academico.google-session.v2'
 
 let scriptPromise: Promise<void> | null = null
 
@@ -156,6 +165,56 @@ export async function fetchUpcomingCalendarEvents(accessToken: string): Promise<
   }))
 }
 
+export async function createRecurringCourseEvent(
+  accessToken: string,
+  course: NewCalendarCourse,
+): Promise<string> {
+  const firstClass = getFirstClassDate(course.weekdays, course.startTime)
+  const end = new Date(firstClass.getTime() + course.durationMinutes * 60_000)
+  const until = new Date(`${course.semesterEnd}T23:59:59`).toISOString()
+    .replaceAll('-', '')
+    .replaceAll(':', '')
+    .replace('.000', '')
+
+  const response = await fetch(
+    'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: course.name,
+        description: 'Aula criada pelo Hub Acadêmico.',
+        start: {
+          dateTime: firstClass.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        end: {
+          dateTime: end.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        recurrence: [
+          `RRULE:FREQ=WEEKLY;BYDAY=${course.weekdays.map(toGoogleWeekday).join(',')};UNTIL=${until}`,
+        ],
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error('Não foi possível criar a aula no Google Agenda. Entre novamente e tente de novo.')
+  }
+
+  const data = await response.json() as { id?: string }
+
+  if (!data.id) {
+    throw new Error('O Google Agenda não retornou o identificador da aula.')
+  }
+
+  return data.id
+}
+
 function loadGoogleIdentityScript() {
   if (window.google?.accounts.oauth2) {
     return Promise.resolve()
@@ -223,4 +282,22 @@ async function fetchGoogleUser(accessToken: string): Promise<GoogleUser> {
     name: data.name,
     picture: data.picture,
   }
+}
+
+function getFirstClassDate(weekdays: number[], startTime: string) {
+  const [hours, minutes] = startTime.split(':').map(Number)
+  const now = new Date()
+  const candidates = weekdays.map((weekday) => {
+    const date = new Date(now)
+    date.setHours(hours, minutes, 0, 0)
+    date.setDate(now.getDate() + (weekday - now.getDay() + 7) % 7)
+    if (date <= now) date.setDate(date.getDate() + 7)
+    return date
+  })
+
+  return candidates.sort((first, second) => first.getTime() - second.getTime())[0]
+}
+
+function toGoogleWeekday(weekday: number) {
+  return ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][weekday]
 }
