@@ -1,0 +1,46 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id          Int          @id @default(autoincrement())
+  email       String       @unique
+  disciplinas Disciplina[]
+
+  @@map("usuarios")
+}
+
+model Disciplina {
+  id         Int     @id @default(autoincrement())
+  usuarioId  Int     @map("usuario_id")
+  nome       String
+  codigo     String
+  ano        Int
+  periodo    Int
+  docente    String?
+  totalAulas Int     @map("total_aulas")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  faltas  Falta[]
+
+  @@unique([usuarioId, codigo, ano, periodo])
+  @@index([usuarioId])
+  @@map("disciplinas")
+}
+
+model Falta {
+  id               Int      @id @default(autoincrement())
+  disciplinaId     Int      @map("disciplina_id")
+  dataFalta        DateTime @map("data_falta") @db.Date
+  quantidadeFaltas Int      @default(1) @map("quantidade_faltas")
+
+  disciplina Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+
+  @@unique([disciplinaId, dataFalta])
+  @@index([disciplinaId])
+  @@map("faltas")
+}
